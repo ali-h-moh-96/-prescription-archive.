@@ -1,0 +1,41 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Locate customtkinter assets
+        id: ctk
+        shell: powershell
+        run: |
+          $path = python -c "import customtkinter, os; print(os.path.dirname(customtkinter.__file__))"
+          echo "path=$path" >> $env:GITHUB_OUTPUT
+
+      - name: Build EXE
+        run: >
+          pyinstaller --noconfirm --onedir --windowed
+          --name "PrescriptionArchive"
+          --add-data "${{ steps.ctk.outputs.path }};customtkinter/"
+          main.py
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrescriptionArchive-Windows
+          path: dist/PrescriptionArchive/
